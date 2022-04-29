@@ -1,9 +1,5 @@
 #include "Stack.h"
-#include "ListStack.h"
-#include "VectorStack.h"
-#include "StackImplementation.h"
 
-#include <stdexcept>
 
 Stack::Stack(StackContainer container)
     : _containerType(container)
@@ -11,11 +7,11 @@ Stack::Stack(StackContainer container)
     switch (container)
     {
     case StackContainer::List: {
-        _pimpl = static_cast<IStackImplementation*>(new ListStack());    // конкретизируйте под ваши конструкторы, если надо
+        _pimpl = static_cast<IStackImplementation*>(new ListStack());
         break;
     }
     case StackContainer::Vector: {
-        _pimpl = static_cast<IStackImplementation*>(new VectorStack());    // конкретизируйте под ваши конструкторы, если надо
+        _pimpl = static_cast<IStackImplementation*>(new VectorStack()); 
         break;
     }
     default:
@@ -24,28 +20,81 @@ Stack::Stack(StackContainer container)
 }
 
 Stack::Stack(const ValueType* valueArray, const size_t arraySize, StackContainer container)
+    : _containerType(container)
 {
-    // принцип тот же, что и в прошлом конструкторе
+    switch (container)
+    {
+    case StackContainer::List: {
+        _pimpl = static_cast<IStackImplementation*>(new ListStack(valueArray, arraySize));  
+        break;
+    }
+    case StackContainer::Vector: {
+        _pimpl = static_cast<IStackImplementation*>(new VectorStack(valueArray, arraySize)); 
+        break;
+    }
+    default:
+        throw std::runtime_error("Неизвестный тип контейнера");
+    }
 }
 
 Stack::Stack(const Stack& copyStack)
+    : Stack(copyStack._containerType)
 {
-    // сами
+    switch (copyStack._containerType)
+    {
+    case StackContainer::List: {
+        _pimpl = static_cast<IStackImplementation*>(new ListStack(*dynamic_cast<ListStack*>(copyStack._pimpl)));
+        break;
+    }
+    case StackContainer::Vector: {
+        _pimpl = static_cast<IStackImplementation*>(new VectorStack(*dynamic_cast<VectorStack*>(copyStack._pimpl)));
+        break;
+    }
+    default:
+        throw std::runtime_error("Неизвестный тип контейнера");
+    }	 
 }
+
 
 Stack& Stack::operator=(const Stack& copyStack)
 {
-    // TODO: вставьте здесь оператор return
+    if(&copyStack == this) {
+        return *this;
+    }
+    delete _pimpl;
+    Stack tmp(copyStack);
+    _pimpl = tmp._pimpl;
+    tmp._pimpl = nullptr;
+    _containerType = tmp._containerType;
+    return *this;
+}
+
+Stack::Stack(Stack&& moveStack) noexcept {
+    _pimpl = moveStack._pimpl;
+    moveStack._pimpl = nullptr;
+    _containerType = moveStack._containerType;
+    moveStack._containerType = StackContainer::Undefined;
+}
+
+Stack& Stack::operator=(Stack&& moveStack) noexcept {
+    if(&moveStack == this) {
+        return *this;
+    }
+	delete[] _pimpl;
+    _pimpl = moveStack._pimpl;
+    moveStack._pimpl = nullptr;
+    _containerType = moveStack._containerType;
+    moveStack._containerType = StackContainer::Undefined;
+    return *this;
 }
 
 Stack::~Stack()
 {
-    delete _pimpl;        // композиция!
+    delete _pimpl;
 }
 
 void Stack::push(const ValueType& value)
 {
-    // можно, т.к. push определен в интерфейсе
     _pimpl->push(value);
 }
 
@@ -66,5 +115,5 @@ bool Stack::isEmpty() const
 
 size_t Stack::size() const
 {
-    return _pimpl->isEmpty();
+    return _pimpl->size();
 }
